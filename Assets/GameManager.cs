@@ -6,6 +6,10 @@ public class GameManager : MonoBehaviour
 {
     [SerializeField] 
     private Transform _area;
+    [SerializeField] 
+    private Vector3 _areaOffset = Vector3.one;
+    [SerializeField] 
+    private Vector3 _areaCenterOffset = Vector3.zero;
     [SerializeField]
     private TargetManager _targetManager;
     
@@ -16,8 +20,8 @@ public class GameManager : MonoBehaviour
 
     private readonly List<Transform> _fishTransforms = new List<Transform>();
 
-    private Vector3 AreaSize => _area.localScale;
-    private Vector3 AreaCenter => _area.position;
+    private Vector3 AreaSize => _area.localScale - _areaOffset;
+    private Vector3 AreaCenter => _area.position + _areaCenterOffset;
     
     private void Start()
     {
@@ -46,5 +50,6 @@ public class GameManager : MonoBehaviour
     private void OnDrawGizmos()
     {
         Gizmos.DrawWireCube(AreaCenter, AreaSize);
+        Gizmos.DrawWireCube(_area.position, _area.localScale);
     }
 }
