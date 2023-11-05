@@ -10,25 +10,23 @@ public class Fish : MonoBehaviour
   [SerializeField]
   private FishData _fishData;
 
-  private Transform _currentTarget;
+  private Target _currentTarget;
   private bool _isMovingToInterestPoint;
   private bool _isReachToInterestPoint;
-  private float _timeElapsedAtInterestPoint;
 
   private void Update()
   {
     if (_isReachToInterestPoint)
     {
-      _timeElapsedAtInterestPoint += Time.deltaTime;
-
-      if (_timeElapsedAtInterestPoint >= _fishData.TimeAtInterestPoint)
+      bool eatingComplete = _currentTarget.Eating(_fishData.TimeAtInterestPoint);
+      if (!eatingComplete)
       {
-        targetManager.DeactivateTarget(_currentTarget);
-        _isReachToInterestPoint = false;
-        _isMovingToInterestPoint = false;
+        return;
       }
 
-      return;
+      _isReachToInterestPoint = false;
+      _isMovingToInterestPoint = false;
+      targetManager.DeactivateTarget(_currentTarget);
     }
 
     Fish [] fish = FindObjectsOfType<Fish>();
@@ -75,9 +73,9 @@ public class Fish : MonoBehaviour
       cohesionMove -= transform.position;
     }
 
-    Vector3 targetDirection = (_currentTarget.position - transform.position).normalized;
+    Vector3 targetDirection = (_currentTarget.transform.position - transform.position).normalized;
 
-    float distanceToTarget = Vector3.Distance(transform.position, _currentTarget.position);
+    float distanceToTarget = Vector3.Distance(transform.position, _currentTarget.transform.position);
     _isReachToInterestPoint = distanceToTarget <= _fishData.StoppingReachDistance;
     _isMovingToInterestPoint = distanceToTarget <= _fishData.StoppingMovingDistance;
     
@@ -112,19 +110,19 @@ public class Fish : MonoBehaviour
     transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, _fishData.RotationSpeed * Time.deltaTime);
   }
 
-  private Transform FindClosestPoint (List<Transform> points)
+  private Target FindClosestPoint (List<Target> points)
   {
     if (points == null || points.Count == 0)
     {
       return null;
     }
 
-    Transform closestPoint = points[0];
-    float closestDistance = Vector3.Distance(transform.position, closestPoint.position);
+    Target closestPoint = points[0];
+    float closestDistance = Vector3.Distance(transform.position, closestPoint.transform.position);
 
     for (int i = 1; i < points.Count; i++)
     {
-      float distance = Vector3.Distance(transform.position, points[i].position);
+      float distance = Vector3.Distance(transform.position, points[i].transform.position);
 
       if (distance < closestDistance)
       {
