@@ -36,6 +36,7 @@ public class Fish : MonoBehaviour
 
     Vector3 avoidanceMove = Vector3.zero;
     Vector3 alignmentMove = Vector3.zero;
+    Vector3 cohesionMove = Vector3.zero;
 
     foreach (Fish fishAgent in fish)
     {
@@ -61,6 +62,17 @@ public class Fish : MonoBehaviour
       {
         alignmentMove += fishAgent.transform.forward;
       }
+      
+      if (distance < _fishData.CohesionRadius)
+      {
+        cohesionMove += fishAgent.transform.position;
+      }
+    }
+    
+    if (cohesionMove != Vector3.zero)
+    {
+      cohesionMove /= fish.Length;
+      cohesionMove -= transform.position;
     }
 
     Vector3 targetDirection = (_currentTarget.position - transform.position).normalized;
@@ -68,8 +80,8 @@ public class Fish : MonoBehaviour
     float distanceToTarget = Vector3.Distance(transform.position, _currentTarget.position);
     _isReachToInterestPoint = distanceToTarget <= _fishData.StoppingReachDistance;
     _isMovingToInterestPoint = distanceToTarget <= _fishData.StoppingMovingDistance;
-
-    Vector3 moveDirection = _isMovingToInterestPoint ? targetDirection : targetDirection + avoidanceMove + alignmentMove;
+    
+    Vector3 moveDirection = _isMovingToInterestPoint ? targetDirection : targetDirection + avoidanceMove + alignmentMove + cohesionMove.normalized * _fishData.CohesionWeight;
     Vector3 newPosition = transform.position + moveDirection.normalized * _fishData.Speed * Time.deltaTime;
 
     float halfX = areaSize.x / 2;
@@ -135,6 +147,10 @@ public class FishData
   [SerializeField]
   private float _alignmentDistance = 5.0f;
   [SerializeField]
+  private float _cohesionWeight = 1.0f;
+  [SerializeField]
+  private float _cohesionRadius = 5.0f;
+  [SerializeField]
   private float _rotationSpeed = 2.0f;
   [SerializeField]
   private float _stoppingMovingDistance = 1.0f;
@@ -146,6 +162,8 @@ public class FishData
   public float Speed => _speed;
   public float AvoidanceRadius => _avoidanceRadius;
   public float AlignmentDistance => _alignmentDistance;
+  public float CohesionWeight => _cohesionWeight;
+  public float CohesionRadius => _cohesionRadius;
   public float RotationSpeed => _rotationSpeed;
   public float StoppingMovingDistance => _stoppingMovingDistance;
   public float StoppingReachDistance => _stoppingReachDistance;
