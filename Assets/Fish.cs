@@ -6,6 +6,7 @@ public class Fish : MonoBehaviour
   public Vector3 areaSize;
   public Vector3 areaCenter;
   public TargetManager targetManager;
+  public Action<Vector3> Reproduce;
 
   [SerializeField]
   private FishData _fishData;
@@ -16,8 +17,31 @@ public class Fish : MonoBehaviour
 
   private void Update()
   {
+    Fish [] fish = FindObjectsOfType<Fish>();
+
+    bool multiEating = false;
+    Vector3 calculateMiddlePoint = default;
+    
     if (_isReachToInterestPoint)
     {
+      foreach (Fish fishAgent in fish)
+      {
+        if (fishAgent == this)
+        {
+          continue;
+        }
+
+        if (!fishAgent._isReachToInterestPoint && fishAgent._currentTarget != _currentTarget)
+        {
+          continue;
+        }
+
+        multiEating = true;
+        calculateMiddlePoint = CalculateMiddlePoint(transform.position, fishAgent.transform.position);
+        
+        break;
+      }
+
       bool eatingComplete = _currentTarget.Eating(_fishData.TimeAtInterestPoint);
       if (!eatingComplete)
       {
@@ -26,10 +50,15 @@ public class Fish : MonoBehaviour
 
       _isReachToInterestPoint = false;
       _isMovingToInterestPoint = false;
-      targetManager.DeactivateTarget(_currentTarget);
-    }
+      bool deactivateComplete = targetManager.DeactivateTarget(_currentTarget);
 
-    Fish [] fish = FindObjectsOfType<Fish>();
+      if (deactivateComplete && multiEating)
+      {
+        Debug.Log("Reproduce");
+        Reproduce?.Invoke(calculateMiddlePoint);
+      }
+    }
+    
     _currentTarget = FindClosestPoint(targetManager.AvailableTargets);
 
     Vector3 avoidanceMove = Vector3.zero;
@@ -132,6 +161,15 @@ public class Fish : MonoBehaviour
     }
 
     return closestPoint;
+  }
+  
+  Vector3 CalculateMiddlePoint(Vector3 pointA, Vector3 pointB)
+  {
+    float middleX = (pointA.x + pointB.x) / 2;
+    float middleY = (pointA.y + pointB.y) / 2;
+    float middleZ = (pointA.z + pointB.z) / 2;
+
+    return new Vector3(middleX, middleY, middleZ);
   }
 }
 

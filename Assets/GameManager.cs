@@ -38,18 +38,31 @@ public class GameManager : MonoBehaviour
                 fishComponent.targetManager = _targetManager;
                 fishComponent.areaCenter = AreaCenter;
                 fishComponent.areaSize = AreaSize;
+                fishComponent.Reproduce = Reproduce;
             }
         }
     }
-    
-    void Update()
+
+    private void Reproduce(Vector3 fishPos)
     {
-        
+        var fish = Instantiate(_fishPrefab, fishPos, _fishPrefab.rotation);
+        _fishTransforms.Add(fish);
+
+        if (fish.TryGetComponent(out Fish fishComponent))
+        {
+            fishComponent.targetManager = _targetManager;
+            fishComponent.areaCenter = AreaCenter;
+            fishComponent.areaSize = AreaSize;
+        }
     }
-    
+
     private void OnDrawGizmos()
     {
+        Gizmos.color = Color.red;
         Gizmos.DrawWireCube(AreaCenter, AreaSize);
+        
+        Gizmos.color = Color.blue;
         Gizmos.DrawWireCube(_area.position, _area.localScale);
     }
+
 }

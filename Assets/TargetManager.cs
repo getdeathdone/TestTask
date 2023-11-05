@@ -13,11 +13,11 @@ public class TargetManager : MonoBehaviour
     private Target _targetPrefab;
     public List<Target> AvailableTargets => _availableTargets;
 
-    public void DeactivateTarget(Target target)
+    public bool DeactivateTarget(Target target)
     {
         if (target == null || !target.IsActive)
         {
-            return;
+            return false;
         }
 
         target.Activate(false);
@@ -28,6 +28,8 @@ public class TargetManager : MonoBehaviour
             Debug.Log("DeactivateAllTarget");
             MoveAllTargets();
         }
+
+        return true;
     }
 
     public void GenerateInitialTargets(Vector3 areaCenter, Vector3 areaSize)
