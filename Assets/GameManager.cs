@@ -29,8 +29,8 @@ public class GameManager : MonoBehaviour
   private Vector3[] _targetPositions;
   private float [] _targetTime;
   private bool [] _targetActive;
-
-  private readonly List<int> _deactivateTarget = new List<int>();
+  private int _targetCount;
+  private int _deactivateTarget;
 
   private readonly List<Transform> _fishTransforms = new List<Transform>();
   private readonly List<Transform> _targetTransforms = new List<Transform>();
@@ -271,13 +271,13 @@ public class GameManager : MonoBehaviour
 
   private void GenerateInitialTargets (Vector3 areaCenter, Vector3 areaSize)
   {
-    int numberOfTargets = Mathf.FloorToInt(areaSize.x * areaSize.z);
+    _targetCount = Mathf.FloorToInt(areaSize.x * areaSize.z);
 
-    _targetPositions = new Vector3[numberOfTargets];
-    _targetActive = new bool[numberOfTargets];
-    _targetTime = new float[numberOfTargets];
+    _targetPositions = new Vector3[_targetCount];
+    _targetActive = new bool[_targetCount];
+    _targetTime = new float[_targetCount];
 
-    for (int i = 0; i < numberOfTargets; i++)
+    for (int i = 0; i < _targetCount; i++)
     {
       Vector3 randomPosition = GenerateRandomPosition(areaCenter, areaSize);
       _targetPositions[i] = randomPosition;
@@ -289,20 +289,20 @@ public class GameManager : MonoBehaviour
     }
   }
 
-  private bool DeactivateTarget (int value)
+  private bool DeactivateTarget (int index)
   {
-    if (_targetTransforms.Count == _deactivateTarget.Count || !_targetActive[value])
+    if (_targetCount == _deactivateTarget || !_targetActive[index])
     {
       return false;
     }
 
-    _targetTime[value] = 0;
-    _targetActive[value] = false;
-    _targetTransforms[value].gameObject.SetActive(false);
+    _targetTime[index] = 0;
+    _targetActive[index] = false;
+    _targetTransforms[index].gameObject.SetActive(false);
     
-    _deactivateTarget.Add(value);
+    _deactivateTarget++;
 
-    if (_targetTransforms.Count == _deactivateTarget.Count)
+    if (_targetCount == _deactivateTarget)
     {
       Debug.Log("DeactivateAllTarget");
       MoveAllTargets();
@@ -313,12 +313,10 @@ public class GameManager : MonoBehaviour
 
   private void MoveAllTargets()
   {
-    for (int index = 0; index < _targetTransforms.Count; index++)
+    for (int index = 0; index < _targetCount; index++)
     {
-      Transform target = _targetTransforms[index];
-
       _targetPositions[index] = AreaSize;
-      target.transform.position = AreaSize;
+      _targetTransforms[index].transform.position = AreaSize;
       
       _targetActive[index] = true;
       _targetTransforms[index].gameObject.SetActive(true);
@@ -328,14 +326,13 @@ public class GameManager : MonoBehaviour
   [ContextMenu("ActivateAllTargets")]
   private void ActivateAllTargets()
   {
-    _deactivateTarget.Clear();
+    _deactivateTarget = 0;
     
-    for (int index = 0; index < _targetTransforms.Count; index++)
+    for (int index = 0; index < _targetCount; index++)
     {
-      Transform target = _targetTransforms[index];
       Vector3 randomPosition = GenerateRandomPosition(AreaCenter, AreaSize);
 
-      target.transform.position = randomPosition;
+      _targetTransforms[index].transform.position = randomPosition;
       _targetPositions[index] = randomPosition;
     }
   }
