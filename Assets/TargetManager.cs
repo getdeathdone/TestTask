@@ -4,7 +4,8 @@ using UnityEngine;
 public class TargetManager : MonoBehaviour
 {
     private readonly List<Target> _targets = new List<Target>();
-    private readonly List<Target> _availableTargets = new List<Target>();
+    private List<Target> _availableTargets = new List<Target>();
+    private readonly List<int> _deactivateTarget = new List<int>();
     
     private Vector3 _areaSize;
     private Vector3 _areaCenter;
@@ -13,7 +14,7 @@ public class TargetManager : MonoBehaviour
     private Target _targetPrefab;
     public List<Target> AvailableTargets => _availableTargets;
 
-    public bool DeactivateTarget(Target target)
+    public bool DeactivateTarget(Target target, int value)
     {
         if (target == null || !target.IsActive)
         {
@@ -21,9 +22,10 @@ public class TargetManager : MonoBehaviour
         }
 
         target.Activate(false);
-        _availableTargets.Remove(target);
+        _availableTargets[value] = null;
+        _deactivateTarget.Add(value);
 
-        if (_availableTargets.Count == 0)
+        if (_availableTargets.Count == _deactivateTarget.Count)
         {
             Debug.Log("DeactivateAllTarget");
             MoveAllTargets();
@@ -57,10 +59,15 @@ public class TargetManager : MonoBehaviour
 
     private void MoveAllTargets()
     {
-        foreach (Target target in _targets)
+        _availableTargets.Clear();
+        _availableTargets = new List<Target>(_targets.Count);
+        _deactivateTarget.Clear();
+        
+        for (int index = 0; index < _targets.Count; index++)
         {
-            target.transform.position = _areaSize;
-            _availableTargets.Add(target);
+            Target VARIABLE = _targets[index];
+            VARIABLE.transform.position = _areaSize;
+            _availableTargets.Add(VARIABLE);
         }
     }
     

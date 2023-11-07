@@ -10,11 +10,6 @@ public class Target : MonoBehaviour
 
   public bool Eating(float timeAtInterestPoint)
   {
-    /*if(!_eatParticles.enabled)
-    {
-      _eatParticles.enabled = true;
-    }*/
-
     _timeElapsedAtInterestPoint += Time.deltaTime;
     return _timeElapsedAtInterestPoint >= timeAtInterestPoint;
   }
