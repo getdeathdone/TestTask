@@ -216,7 +216,6 @@ GameObject:
   m_Component:
   - component: {fileID: 553431320}
   - component: {fileID: 553431319}
-  - component: {fileID: 553431321}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -236,12 +235,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6228e4029bc0747bca18452fc999a0b5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _area: {fileID: 483698721}
   _areaOffset: {x: 0.5, y: 0.25, z: 0.5}
   _areaCenterOffset: {x: 0, y: 0.125, z: 0}
-  _targetManager: {fileID: 553431321}
+  _area: {fileID: 483698721}
+  _targetPrefab: {fileID: 6655324555017828013, guid: 988fc7576384347ad9fa33626041c4bc, type: 3}
   _fishPrefab: {fileID: 7984715341085350649, guid: 18ed688fa682d49218e259db6c4ca3e2, type: 3}
   _fishCount: 10
+  _fishData:
+    _speed: 3
+    _avoidanceRadius: 2
+    _alignmentDistance: 5
+    _cohesionWeight: 1
+    _cohesionRadius: 5
+    _rotationSpeed: 2
+    _stoppingMovingDistance: 1
+    _stoppingReachDistance: 0.5
+    _timeAtInterestPoint: 5
 --- !u!4 &553431320
 Transform:
   m_ObjectHideFlags: 0
@@ -257,19 +266,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &553431321
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 553431318}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a4fe0421b7dc4394af783b6d04ea93e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _targetPrefab: {fileID: -2902706366120133836, guid: 988fc7576384347ad9fa33626041c4bc, type: 3}
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
