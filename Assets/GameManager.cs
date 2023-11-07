@@ -291,7 +291,7 @@ public class GameManager : MonoBehaviour
 
   private bool DeactivateTarget (int value)
   {
-    if (!_targetActive[value])
+    if (_targetTransforms.Count == _deactivateTarget.Count || !_targetActive[value])
     {
       return false;
     }
@@ -313,8 +313,6 @@ public class GameManager : MonoBehaviour
 
   private void MoveAllTargets()
   {
-    _deactivateTarget.Clear();
-
     for (int index = 0; index < _targetTransforms.Count; index++)
     {
       Transform target = _targetTransforms[index];
@@ -330,6 +328,8 @@ public class GameManager : MonoBehaviour
   [ContextMenu("ActivateAllTargets")]
   private void ActivateAllTargets()
   {
+    _deactivateTarget.Clear();
+    
     for (int index = 0; index < _targetTransforms.Count; index++)
     {
       Transform target = _targetTransforms[index];
