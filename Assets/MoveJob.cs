@@ -53,6 +53,11 @@ public struct MoveJob : IJob
       {
         continue;
       }
+      
+      if (FishMovingToInterestPoint[i])
+      {
+        continue;
+      }
 
       float distance = Vector3.Distance(FishPositions[index], FishPositions[i]);
 
@@ -77,13 +82,6 @@ public struct MoveJob : IJob
     {
       cohesionMove /= FishCount;
       cohesionMove -= FishPositions[index];
-    }
-
-    for (int i = 0; i < FishMovingToInterestPoint.Length; i++)
-    {
-      avoidanceMove = FishMovingToInterestPoint[i] ? Vector3.zero : avoidanceMove;
-      alignmentMove = FishMovingToInterestPoint[i] ? Vector3.zero : alignmentMove;
-      cohesionMove = FishMovingToInterestPoint[i] ? Vector3.zero : cohesionMove;
     }
 
     Vector3 targetDirection = (FishTargetPositions[index] - FishPositions[index]).normalized;
