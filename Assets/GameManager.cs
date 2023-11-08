@@ -248,6 +248,40 @@ public class GameManager : MonoBehaviour
     ChangeAllTargetTransform();
   }
 
+  private void AddTargets (int addTargetCount)
+  {
+    int newTargetCount = addTargetCount + _targetCount;
+    
+    NativeArray<Vector3> newTargetPositions = new NativeArray<Vector3>(newTargetCount, Allocator.Persistent);
+    NativeArray<float> newTargetTime = new NativeArray<float>(newTargetCount, Allocator.Persistent);
+    NativeArray<bool> newTargetActive = new NativeArray<bool>(newTargetCount, Allocator.Persistent);
+
+    for (int i = 0; i < _targetCount; i++)
+    {
+      newTargetPositions[i] = _targetPositions[i];
+      newTargetTime[i] = _targetTime[i];
+      newTargetActive[i] = _targetActive[i];
+    }
+
+    _targetPositions.Dispose();
+    _targetTime.Dispose();
+    _targetActive.Dispose();
+
+    _targetPositions = newTargetPositions;
+    _targetTime = newTargetTime;
+    _targetActive = newTargetActive;
+    
+    for (int i = _targetCount; i < newTargetCount; i++)
+    {
+      Vector3 position = GenerateRandomPosition();
+      var newTarget = Instantiate(_targetPrefab, position, _targetPrefab.rotation);
+      _targetTransforms.Add(newTarget);
+      ResetTarget(i);
+    }
+
+    _targetCount = newTargetCount;
+  }
+
   private bool DeactivateTarget (int index)
   {
     if (_targetCount == _deactivateTarget || !_targetActive[index])
@@ -264,7 +298,7 @@ public class GameManager : MonoBehaviour
     {
       Debug.Log("DeactivateAllTarget");
       ResetAllTargets();
-      ClearTargetData();
+      ResetAllFishDeactivateTarget();
     }
 
     return true;
@@ -274,10 +308,17 @@ public class GameManager : MonoBehaviour
       for (int i = 0; i < _targetCount; i++)
       {
         _targetTransforms[i].transform.position = StartTargetPointRelativeToCenter;
+        ResetTarget(i);
       }
     }
   }
 
+  [ContextMenu("Add Targets")]
+  private void AddTenTargets()
+  {
+    AddTargets(10);
+  }
+  
   [ContextMenu("ChangeAllTargetTransform")]
   private void ChangeAllTargetTransform()
   {
@@ -286,21 +327,22 @@ public class GameManager : MonoBehaviour
       Vector3 randomPosition = GenerateRandomPosition();
       _targetTransforms[i].transform.position = randomPosition;
       _targetTransforms[i].gameObject.SetActive(true);
+      ResetTarget(i);
     }
     
     _deactivateTarget = 0;
-    ClearTargetData();
+    ResetAllFishDeactivateTarget();
   }
 
-  private void ClearTargetData()
+  private void ResetTarget (int i)
   {
-    for (int i = 0; i < _targetCount; i++)
-    {
-      _targetTime[i] = 0;
-      _targetActive[i] = true;
-      _targetPositions[i] = _targetTransforms[i].position;
-    }
-    
+    _targetTime[i] = 0;
+    _targetActive[i] = true;
+    _targetPositions[i] = _targetTransforms[i].position;
+  }
+
+  private void ResetAllFishDeactivateTarget()
+  {
     for (int i = 0; i < _fishCount; i++)
     {
       _fishDeactivateTarget[i] = -1;
