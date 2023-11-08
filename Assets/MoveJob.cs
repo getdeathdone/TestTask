@@ -2,20 +2,26 @@ using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
 
-public struct MoveJob : IJob
+public struct MoveJob : IJobParallelFor
 {
-  [ReadOnly]
-  public int index;
-  [ReadOnly]
-  public int FishCount;
-
+  [NativeDisableParallelForRestriction]
   public NativeArray<Vector3> FishPositions;
+  [NativeDisableParallelForRestriction]
   public NativeArray<Quaternion> FishRotation;
+  [NativeDisableParallelForRestriction]
   public NativeArray<bool> FishMovingToInterestPoint;
+  [NativeDisableParallelForRestriction]
   public NativeArray<bool> FishReachToInterestPoints;
-
-  [ReadOnly]
+  
+  [NativeDisableParallelForRestriction]
   public NativeArray<Vector3> FishTargetPositions;
+  [NativeDisableParallelForRestriction]
+  public NativeArray<int> FishTargetIndexArray;
+
+  [ReadOnly, NativeDisableParallelForRestriction]
+  public NativeArray<Vector3> TargetPositions;
+  [ReadOnly, NativeDisableParallelForRestriction]
+  public NativeArray<bool> TargetActive;
 
   [ReadOnly]
   public float AvoidanceRadius;
@@ -41,13 +47,35 @@ public struct MoveJob : IJob
   [ReadOnly]
   public Vector3 AreaSize;
 
-  public void Execute()
+  public void Execute (int index)
   {
+    float closestDistance = float.MaxValue;
+    Vector3 closestPoint = Vector3.zero;
+
+    for (int i = 0; i < TargetPositions.Length; i++)
+    {
+      if (!TargetActive[i])
+      {
+        continue;
+      }
+
+      float distance = Vector3.Distance(FishPositions[index], TargetPositions[i]);
+
+      if (distance < closestDistance)
+      {
+        FishTargetIndexArray[index] = i;
+        closestPoint = TargetPositions[i];
+        closestDistance = distance;
+      }
+    }
+
+    FishTargetPositions[index] = closestPoint;
+    
     Vector3 avoidanceMove = Vector3.zero;
     Vector3 alignmentMove = Vector3.zero;
     Vector3 cohesionMove = Vector3.zero;
 
-    for (int i = 0; i < FishCount; i++)
+    for (int i = 0; i < FishPositions.Length; i++)
     {
       if (i == index)
       {
@@ -80,7 +108,7 @@ public struct MoveJob : IJob
 
     if (cohesionMove != Vector3.zero)
     {
-      cohesionMove /= FishCount;
+      cohesionMove /= FishPositions.Length;
       cohesionMove -= FishPositions[index];
     }
 
