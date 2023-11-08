@@ -12,13 +12,13 @@ public struct EatJob : IJobParallelFor
   public NativeArray<Vector3> FishTargetPositionsArray;
   [ReadOnly, NativeDisableParallelForRestriction]
   public NativeArray<int> FishTargetIndexArray;
-  
+
   [NativeDisableParallelForRestriction]
   public NativeArray<bool> MovingToInterestPoint;
   [NativeDisableParallelForRestriction]
   public NativeArray<bool> ReachToInterestPoints;
-  
-  [NativeDisableParallelForRestriction]
+
+  [ReadOnly, NativeDisableParallelForRestriction]
   public NativeArray<bool> TargetActive;
   [NativeDisableParallelForRestriction]
   public NativeArray<float> TargetTime;

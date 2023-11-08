@@ -20,32 +20,33 @@ public class GameManager : MonoBehaviour
   [SerializeField]
   private Transform _fishPrefab;
   [SerializeField]
-  private int _fishCount;
+  private int _fishCount = 10;
   [SerializeField]
   private FishData _fishData;
   
   private int _targetCount;
   private int _deactivateTarget;
 
-  private NativeArray<Vector3> _fishPosition;
+  private NativeArray<Vector3> _position;
   private NativeArray<Quaternion> _rotation;
-  private NativeArray<int> _fishDeactivateTarget;
+  private NativeArray<int> _fishDeactivateTarget; // init value -1
   
   private NativeArray<bool> _reachToInterestPoints;
   private NativeArray<bool> _movingToInterestPoint;
   private NativeArray<int> _fishTargetIndex;
   private NativeArray<Vector3> _fishTargetPositions;
   private NativeArray<Vector3> _calculateMiddlePoint;
-  
-  private NativeArray<bool> _targetActive;
+
   private NativeArray<Vector3> _targetPositions;
   private NativeArray<float> _targetTime;
+  private NativeArray<bool> _targetActive; // init value true
 
   private readonly List<Transform> _fishTransforms = new List<Transform>();
   private readonly List<Transform> _targetTransforms = new List<Transform>();
 
   private Vector3 AreaSize => _area.localScale - _areaOffset;
   private Vector3 AreaCenter => _area.position + _areaCenterOffset;
+  private Vector3 StartTargetPointRelativeToCenter => AreaCenter + _startTargetPoint;
 
   private void OnDrawGizmos()
   {
@@ -58,7 +59,7 @@ public class GameManager : MonoBehaviour
 
   private void Awake()
   {
-    _fishPosition = new NativeArray<Vector3>(_fishCount, Allocator.Persistent);
+    _position = new NativeArray<Vector3>(_fishCount, Allocator.Persistent);
     _rotation = new NativeArray<Quaternion>(_fishCount, Allocator.Persistent);
     _movingToInterestPoint = new NativeArray<bool>(_fishCount, Allocator.Persistent);
     _reachToInterestPoints = new NativeArray<bool>(_fishCount, Allocator.Persistent);
@@ -89,7 +90,7 @@ public class GameManager : MonoBehaviour
   {
     EatJob eatJob = new EatJob
     {
-      FishPositions = _fishPosition,
+      FishPositions = _position,
       FishTargetPositionsArray = _fishTargetPositions,
       FishTargetIndexArray = _fishTargetIndex,
       MovingToInterestPoint = _movingToInterestPoint,
@@ -126,7 +127,7 @@ public class GameManager : MonoBehaviour
     
     MoveJob moveJob = new MoveJob
     {
-      FishPositions = _fishPosition,
+      FishPositions = _position,
       FishRotation = _rotation,
       FishMovingToInterestPoint = _movingToInterestPoint,
       FishReachToInterestPoints = _reachToInterestPoints,
@@ -157,14 +158,14 @@ public class GameManager : MonoBehaviour
         continue;
       }
 
-      _fishTransforms[i].transform.position = _fishPosition[i];
+      _fishTransforms[i].transform.position = _position[i];
       _fishTransforms[i].transform.rotation = _rotation[i];
     }
   }
 
   private void OnDestroy()
   {
-    _fishPosition.Dispose();
+    _position.Dispose();
     _rotation.Dispose();
     _movingToInterestPoint.Dispose();
     _reachToInterestPoints.Dispose();
@@ -193,7 +194,7 @@ public class GameManager : MonoBehaviour
 
       for (int i = 0; i < _fishCount; i++)
       {
-        newFishPosition[i] = _fishPosition[i];
+        newFishPosition[i] = _position[i];
         newRotation[i] = _rotation[i];
         newMovingToInterestPoint[i] = _movingToInterestPoint[i];
         newReachToInterestPoints[i] = _reachToInterestPoints[i];
@@ -205,7 +206,7 @@ public class GameManager : MonoBehaviour
 
       newFishDeactivateTarget[_fishCount] = -1;
 
-      _fishPosition.Dispose();
+      _position.Dispose();
       _rotation.Dispose();
       _movingToInterestPoint.Dispose();
       _reachToInterestPoints.Dispose();
@@ -214,7 +215,7 @@ public class GameManager : MonoBehaviour
       _fishDeactivateTarget.Dispose();
       _calculateMiddlePoint.Dispose();
 
-      _fishPosition = newFishPosition;
+      _position = newFishPosition;
       _rotation = newRotation;
       _movingToInterestPoint = newMovingToInterestPoint;
       _reachToInterestPoints = newReachToInterestPoints;
@@ -232,7 +233,7 @@ public class GameManager : MonoBehaviour
     var fish = Instantiate(_fishPrefab, position, fishRot);
     _fishTransforms.Add(fish);
 
-    _fishPosition[fishNumber - 1] = position;
+    _position[fishNumber - 1] = position;
     _rotation[fishNumber - 1] = fishRot;
   }
 
@@ -272,7 +273,7 @@ public class GameManager : MonoBehaviour
     {
       for (int i = 0; i < _targetCount; i++)
       {
-        _targetTransforms[i].transform.position = _startTargetPoint;
+        _targetTransforms[i].transform.position = StartTargetPointRelativeToCenter;
       }
     }
   }
