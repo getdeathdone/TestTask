@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 6655324555017828013}
   - component: {fileID: 7875534046884842772}
   - component: {fileID: 9097276139487081928}
-  - component: {fileID: -2902706366120133836}
   - component: {fileID: 6721206974017075989}
   m_Layer: 0
   m_Name: Feed
@@ -85,19 +84,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!114 &-2902706366120133836
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6673758625693477875}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2c4ee8cae12849418b5fb25ebbafd0e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _eatParticles: {fileID: 6721206974017075989}
 --- !u!108 &6721206974017075989
 Light:
   m_ObjectHideFlags: 0

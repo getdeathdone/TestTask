@@ -237,6 +237,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _areaOffset: {x: 0.5, y: 0.25, z: 0.5}
   _areaCenterOffset: {x: 0, y: 0.125, z: 0}
+  _startTargetPoint: {x: 0, y: 10, z: 0}
   _area: {fileID: 483698721}
   _targetPrefab: {fileID: 6655324555017828013, guid: 988fc7576384347ad9fa33626041c4bc, type: 3}
   _fishPrefab: {fileID: 7984715341085350649, guid: 18ed688fa682d49218e259db6c4ca3e2, type: 3}

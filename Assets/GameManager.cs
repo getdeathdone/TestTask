@@ -10,6 +10,8 @@ public class GameManager : MonoBehaviour
   private Vector3 _areaOffset = Vector3.one;
   [SerializeField]
   private Vector3 _areaCenterOffset = Vector3.zero;
+  [SerializeField]
+  private Vector3 _startTargetPoint;
 
   [SerializeField]
   private Transform _area;
@@ -21,30 +23,23 @@ public class GameManager : MonoBehaviour
   private int _fishCount;
   [SerializeField]
   private FishData _fishData;
-
-  private bool _changeTargetTransform;
-
-  private List<Vector3> _fishPositions;
-  private List<Quaternion> _fishRotation;
-  private bool [] _fishReachToInterestPoints;
-  private bool [] _fishMovingToInterestPoint;
-  private Vector3 [] _fishTargetPositions;
-  private int [] _fishTargetIndex;
-
-  private Vector3 [] _targetPositions;
-  private float [] _targetTime;
-  private bool [] _targetActive;
+  
   private int _targetCount;
   private int _deactivateTarget;
 
-  private NativeArray<Vector3> position;
-  private NativeArray<Quaternion> rotation;
-  private NativeArray<bool> movingToInterestPoint;
-  private NativeArray<bool> reachToInterestPoints;
-  private NativeArray<Vector3> fishTargetPositions;
-  private NativeArray<int> fishTargetIndex;
-  private NativeArray<Vector3> targetPositions;
-  private NativeArray<bool> targetActive;
+  private NativeArray<Vector3> _fishPosition;
+  private NativeArray<Quaternion> _rotation;
+  private NativeArray<int> _fishDeactivateTarget;
+  
+  private NativeArray<bool> _reachToInterestPoints;
+  private NativeArray<bool> _movingToInterestPoint;
+  private NativeArray<int> _fishTargetIndex;
+  private NativeArray<Vector3> _fishTargetPositions;
+  private NativeArray<Vector3> _calculateMiddlePoint;
+  
+  private NativeArray<bool> _targetActive;
+  private NativeArray<Vector3> _targetPositions;
+  private NativeArray<float> _targetTime;
 
   private readonly List<Transform> _fishTransforms = new List<Transform>();
   private readonly List<Transform> _targetTransforms = new List<Transform>();
@@ -63,74 +58,82 @@ public class GameManager : MonoBehaviour
 
   private void Awake()
   {
-    position = new NativeArray<Vector3>(_fishCount, Allocator.Persistent);
-    rotation = new NativeArray<Quaternion>(_fishCount, Allocator.Persistent);
-    movingToInterestPoint = new NativeArray<bool>(_fishCount, Allocator.Persistent);
-    reachToInterestPoints = new NativeArray<bool>(_fishCount, Allocator.Persistent);
-    fishTargetPositions = new NativeArray<Vector3>(_fishCount, Allocator.Persistent);
-    fishTargetIndex = new NativeArray<int>(_fishCount, Allocator.Persistent);
+    _fishPosition = new NativeArray<Vector3>(_fishCount, Allocator.Persistent);
+    _rotation = new NativeArray<Quaternion>(_fishCount, Allocator.Persistent);
+    _movingToInterestPoint = new NativeArray<bool>(_fishCount, Allocator.Persistent);
+    _reachToInterestPoints = new NativeArray<bool>(_fishCount, Allocator.Persistent);
+    _fishTargetPositions = new NativeArray<Vector3>(_fishCount, Allocator.Persistent);
+    _fishTargetIndex = new NativeArray<int>(_fishCount, Allocator.Persistent);
+
+    _fishDeactivateTarget = new NativeArray<int>(_fishCount, Allocator.Persistent);
+    _calculateMiddlePoint = new NativeArray<Vector3>(_fishCount, Allocator.Persistent);
+
+    _targetCount = Mathf.FloorToInt(AreaSize.x * AreaSize.z);
+    
+    _targetPositions = new NativeArray<Vector3>(_targetCount, Allocator.Persistent);
+    _targetActive = new NativeArray<bool>(_targetCount, Allocator.Persistent);
+    _targetTime = new NativeArray<float>(_targetCount, Allocator.Persistent);
   }
 
   private void Start()
   {
-    _targetCount = Mathf.FloorToInt(AreaSize.x * AreaSize.z);
     GenerateInitialTargets();
 
-    targetPositions = new NativeArray<Vector3>(_targetCount, Allocator.Persistent);
-    targetActive = new NativeArray<bool>(_targetCount, Allocator.Persistent);
-
-    _fishPositions = new List<Vector3>(_fishCount);
-    _fishRotation = new List<Quaternion>(_fishCount);
-
-    _fishReachToInterestPoints = new bool[_fishCount];
-    _fishMovingToInterestPoint = new bool[_fishCount];
-    _fishTargetPositions = new Vector3[_fishCount];
-    _fishTargetIndex = new int[_fishCount];
-
-    for (int i = 0; i < _fishCount; i++)
+    for (int i = 1; i <= _fishCount; i++)
     {
-      var fishPos = GenerateRandomPosition();
-      var fishRot = _fishPrefab.rotation;
-      _fishPositions.Add(fishPos);
-      _fishRotation.Add(fishRot);
-      Reproduce(fishPos, fishRot);
+      Reproduce(default, i);
     }
   }
 
   private void Update()
   {
-    bool [] changeTransform = new bool[_fishCount];
-
-    for (int index = 0; index < _fishCount; index++)
+    EatJob eatJob = new EatJob
     {
-      changeTransform[index] = UpdateFish(index, _fishPositions, _fishMovingToInterestPoint, _fishReachToInterestPoints, _fishTargetPositions, _fishTargetIndex, _targetActive,
-        _targetTime);
+      FishPositions = _fishPosition,
+      FishTargetPositionsArray = _fishTargetPositions,
+      FishTargetIndexArray = _fishTargetIndex,
+      MovingToInterestPoint = _movingToInterestPoint,
+      ReachToInterestPoints = _reachToInterestPoints,
+      TargetActive = _targetActive,
+      TargetTime = _targetTime,
+      TimeAtInterestPoint = _fishData.TimeAtInterestPoint,
+      CalculateMiddlePoint = _calculateMiddlePoint,
+      FishDeactivateTarget = _fishDeactivateTarget,
+      deltaTime = Time.deltaTime
+    };
+    
+    JobHandle jobHandle = eatJob.Schedule(_fishCount, 0);
+    jobHandle.Complete();
 
-      position[index] = _fishPositions[index];
-      rotation[index] = _fishRotation[index];
-      movingToInterestPoint[index] = _fishMovingToInterestPoint[index];
-      reachToInterestPoints[index] = _fishReachToInterestPoints[index];
-    }
-
-    if (_changeTargetTransform)
+    for (int i = 0; i < _fishCount; i++)
     {
-      for (int i = 0; i < _targetCount; i++)
+      bool deactivateComplete = false;
+      
+      if (_fishDeactivateTarget[i] != -1)
       {
-        targetPositions[i] = _targetPositions[i];
-        targetActive[i] = _targetActive[i];
+        deactivateComplete = DeactivateTarget(_fishDeactivateTarget[i]);
+        _fishDeactivateTarget[i] = -1;
+      }
+    
+      if (_calculateMiddlePoint[i] != default && deactivateComplete)
+      {
+        Debug.Log("Reproduce");
+        Reproduce(_calculateMiddlePoint[i], _fishCount + 1);
+
+        _calculateMiddlePoint[i] = default;
       }
     }
-
+    
     MoveJob moveJob = new MoveJob
     {
-      FishPositions = position,
-      FishRotation = rotation,
-      FishMovingToInterestPoint = movingToInterestPoint,
-      FishReachToInterestPoints = reachToInterestPoints,
-      FishTargetPositions = fishTargetPositions,
-      FishTargetIndexArray = fishTargetIndex,
-      TargetPositions = targetPositions,
-      TargetActive = targetActive,
+      FishPositions = _fishPosition,
+      FishRotation = _rotation,
+      FishMovingToInterestPoint = _movingToInterestPoint,
+      FishReachToInterestPoints = _reachToInterestPoints,
+      FishTargetPositions = _fishTargetPositions,
+      FishTargetIndexArray = _fishTargetIndex,
+      TargetPositions = _targetPositions,
+      TargetActive = _targetActive,
       AvoidanceRadius = _fishData.AvoidanceRadius,
       AlignmentDistance = _fishData.AlignmentDistance,
       CohesionRadius = _fishData.CohesionRadius,
@@ -144,118 +147,101 @@ public class GameManager : MonoBehaviour
       deltaTime = Time.deltaTime
     };
 
-    JobHandle jobHandle = moveJob.Schedule(_fishCount, 0);
+    jobHandle = moveJob.Schedule(_fishCount, 0);
     jobHandle.Complete();
 
     for (int i = 0; i < _fishCount; i++)
     {
-      _fishPositions[i] = position[i];
-      _fishRotation[i] = rotation[i];
-      _fishMovingToInterestPoint[i] = movingToInterestPoint[i];
-      _fishReachToInterestPoints[i] = reachToInterestPoints[i];
-      _fishTargetPositions[i] = fishTargetPositions[i];
-      _fishTargetIndex[i] = fishTargetIndex[i];
-
-      if (!changeTransform[i])
+      if (_reachToInterestPoints[i])
       {
         continue;
       }
 
-      _fishTransforms[i].transform.position = _fishPositions[i];
-      _fishTransforms[i].transform.rotation = _fishRotation[i];
+      _fishTransforms[i].transform.position = _fishPosition[i];
+      _fishTransforms[i].transform.rotation = _rotation[i];
     }
   }
 
   private void OnDestroy()
   {
-    position.Dispose();
-    rotation.Dispose();
-    movingToInterestPoint.Dispose();
-    reachToInterestPoints.Dispose();
-    fishTargetPositions.Dispose();
-    fishTargetIndex.Dispose();
-    targetPositions.Dispose();
-    targetActive.Dispose();
+    _fishPosition.Dispose();
+    _rotation.Dispose();
+    _movingToInterestPoint.Dispose();
+    _reachToInterestPoints.Dispose();
+    _fishTargetPositions.Dispose();
+    _fishTargetIndex.Dispose();
+    _targetPositions.Dispose();
+    _targetActive.Dispose();
+    _targetTime.Dispose();
+    _fishDeactivateTarget.Dispose();
+    _calculateMiddlePoint.Dispose();
   }
 
-  private bool UpdateFish (
-    int index, List<Vector3> fishPositions, bool [] fishMovingToInterestPoint, bool [] fishReachToInterestPoints, Vector3 [] fishTargetPositionsArray, int [] fishTargetIndexArray,
-    bool [] targetActive, float [] targetTime)
+  private void Reproduce (Vector3 fishPos, int fishNumber)
   {
-    if (fishReachToInterestPoints[index])
+    if (fishNumber > _fishCount)
     {
-      Vector3 calculateMiddlePoint = default;
+      NativeArray<Vector3> newFishPosition = new NativeArray<Vector3>(fishNumber, Allocator.Persistent);
+      NativeArray<Quaternion> newRotation = new NativeArray<Quaternion>(fishNumber, Allocator.Persistent);
+      NativeArray<bool> newMovingToInterestPoint = new NativeArray<bool>(fishNumber, Allocator.Persistent);
+      NativeArray<bool> newReachToInterestPoints = new NativeArray<bool>(fishNumber, Allocator.Persistent);
+      NativeArray<Vector3> newFishTargetPositions = new NativeArray<Vector3>(fishNumber, Allocator.Persistent);
+      NativeArray<int> newFishTargetIndex = new NativeArray<int>(fishNumber, Allocator.Persistent);
 
-      for (int i = 0; i < fishPositions.Count; i++)
+      NativeArray<int> newFishDeactivateTarget = new NativeArray<int>(fishNumber, Allocator.Persistent);
+      NativeArray<Vector3> newCalculateMiddlePoint = new NativeArray<Vector3>(fishNumber, Allocator.Persistent);
+
+      for (int i = 0; i < _fishCount; i++)
       {
-        if (i == index)
-        {
-          continue;
-        }
-
-        if (!fishReachToInterestPoints[i] && fishTargetPositionsArray[i] != fishTargetPositionsArray[index])
-        {
-          continue;
-        }
-
-        float middleX = (fishPositions[index].x + fishPositions[i].x) / 2;
-        float middleY = (fishPositions[index].y + fishPositions[i].y) / 2;
-        float middleZ = (fishPositions[index].z + fishPositions[i].z) / 2;
-        calculateMiddlePoint = new Vector3(middleX, middleY, middleZ);
-
-        break;
+        newFishPosition[i] = _fishPosition[i];
+        newRotation[i] = _rotation[i];
+        newMovingToInterestPoint[i] = _movingToInterestPoint[i];
+        newReachToInterestPoints[i] = _reachToInterestPoints[i];
+        newFishTargetPositions[i] = _fishTargetPositions[i];
+        newFishTargetIndex[i] = _fishTargetIndex[i];
+        newFishDeactivateTarget[i] = _fishDeactivateTarget[i];
+        newCalculateMiddlePoint[i] = _calculateMiddlePoint[i];
       }
 
-      bool eatingComplete = !targetActive[fishTargetIndexArray[index]] || Eating(_fishData.TimeAtInterestPoint, fishTargetIndexArray[index]);
+      newFishDeactivateTarget[_fishCount] = -1;
 
-      if (!eatingComplete)
-      {
-        return false;
-      }
+      _fishPosition.Dispose();
+      _rotation.Dispose();
+      _movingToInterestPoint.Dispose();
+      _reachToInterestPoints.Dispose();
+      _fishTargetPositions.Dispose();
+      _fishTargetIndex.Dispose();
+      _fishDeactivateTarget.Dispose();
+      _calculateMiddlePoint.Dispose();
 
-      fishReachToInterestPoints[index] = false;
-      fishMovingToInterestPoint[index] = false;
-      bool deactivateComplete = DeactivateTarget(fishTargetIndexArray[index]);
+      _fishPosition = newFishPosition;
+      _rotation = newRotation;
+      _movingToInterestPoint = newMovingToInterestPoint;
+      _reachToInterestPoints = newReachToInterestPoints;
+      _fishTargetPositions = newFishTargetPositions;
+      _fishTargetIndex = newFishTargetIndex;
+      _fishDeactivateTarget = newFishDeactivateTarget;
+      _calculateMiddlePoint = newCalculateMiddlePoint;
 
-      if (calculateMiddlePoint != default && deactivateComplete)
-      {
-        Debug.Log("Reproduce");
-        //Reproduce?.Invoke(calculateMiddlePoint);
-      }
+      _fishCount = fishNumber;
     }
 
-    return true;
+    Vector3 position = fishPos == default ? GenerateRandomPosition() : fishPos;
+    Quaternion fishRot = _fishPrefab.rotation;
 
-    bool Eating (float timeAtInterestPoint, int indexTargetTime)
-    {
-      targetTime[indexTargetTime] += Time.deltaTime;
-      return targetTime[indexTargetTime] >= timeAtInterestPoint;
-    }
-  }
-
-  private void Reproduce (Vector3 fishPos, Quaternion fishRot)
-  {
-    if (fishRot == default)
-    {
-      fishRot = _fishPrefab.rotation;
-    }
-
-    var fish = Instantiate(_fishPrefab, fishPos, fishRot);
+    var fish = Instantiate(_fishPrefab, position, fishRot);
     _fishTransforms.Add(fish);
+
+    _fishPosition[fishNumber - 1] = position;
+    _rotation[fishNumber - 1] = fishRot;
   }
 
   private void GenerateInitialTargets()
   {
-    _targetPositions = new Vector3[_targetCount];
-    _targetActive = new bool[_targetCount];
-    _targetTime = new float[_targetCount];
-
     for (int i = 0; i < _targetCount; i++)
     {
       var newTarget = Instantiate(_targetPrefab);
       _targetTransforms.Add(newTarget);
-
-      _targetActive[i] = true;
     }
 
     ChangeAllTargetTransform();
@@ -267,8 +253,7 @@ public class GameManager : MonoBehaviour
     {
       return false;
     }
-
-    _targetTime[index] = 0;
+    
     _targetActive[index] = false;
     _targetTransforms[index].gameObject.SetActive(false);
 
@@ -278,19 +263,16 @@ public class GameManager : MonoBehaviour
     {
       Debug.Log("DeactivateAllTarget");
       ResetAllTargets();
+      ClearTargetData();
     }
 
     return true;
 
     void ResetAllTargets()
     {
-      for (int index = 0; index < _targetCount; index++)
+      for (int i = 0; i < _targetCount; i++)
       {
-        _targetPositions[index] = AreaSize;
-        _targetTransforms[index].transform.position = AreaSize;
-
-        _targetActive[index] = true;
-        _targetTransforms[index].gameObject.SetActive(true);
+        _targetTransforms[i].transform.position = _startTargetPoint;
       }
     }
   }
@@ -298,15 +280,29 @@ public class GameManager : MonoBehaviour
   [ContextMenu("ChangeAllTargetTransform")]
   private void ChangeAllTargetTransform()
   {
-    _deactivateTarget = 0;
-    _changeTargetTransform = true;
-
-    for (int index = 0; index < _targetCount; index++)
+    for (int i = 0; i < _targetCount; i++)
     {
       Vector3 randomPosition = GenerateRandomPosition();
+      _targetTransforms[i].transform.position = randomPosition;
+      _targetTransforms[i].gameObject.SetActive(true);
+    }
+    
+    _deactivateTarget = 0;
+    ClearTargetData();
+  }
 
-      _targetPositions[index] = randomPosition;
-      _targetTransforms[index].transform.position = randomPosition;
+  private void ClearTargetData()
+  {
+    for (int i = 0; i < _targetCount; i++)
+    {
+      _targetTime[i] = 0;
+      _targetActive[i] = true;
+      _targetPositions[i] = _targetTransforms[i].position;
+    }
+    
+    for (int i = 0; i < _fishCount; i++)
+    {
+      _fishDeactivateTarget[i] = -1;
     }
   }
 
