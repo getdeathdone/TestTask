@@ -1,5 +1,8 @@
 using System.Collections.Generic;
+using Unity.Collections;
+using Unity.Jobs;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class GameManager : MonoBehaviour
 {
@@ -26,17 +29,43 @@ public class GameManager : MonoBehaviour
   private Vector3 [] _fishTargetPositions;
   private int [] _fishTargetIndex;
 
-  private Vector3[] _targetPositions;
+  private Vector3 [] _targetPositions;
   private float [] _targetTime;
   private bool [] _targetActive;
   private int _targetCount;
   private int _deactivateTarget;
+
+  private NativeArray<Vector3> position;
+  private NativeArray<Quaternion> rotation;
+  private NativeArray<bool> movingToInterestPoint;
+  private NativeArray<bool> reachToInterestPoints;
+  private NativeArray<Vector3> fishTargetPositions;
+  private NativeArray<int> fishTargetIndex;
 
   private readonly List<Transform> _fishTransforms = new List<Transform>();
   private readonly List<Transform> _targetTransforms = new List<Transform>();
 
   private Vector3 AreaSize => _area.localScale - _areaOffset;
   private Vector3 AreaCenter => _area.position + _areaCenterOffset;
+
+  private void OnDrawGizmos()
+  {
+    Gizmos.color = Color.red;
+    Gizmos.DrawWireCube(AreaCenter, AreaSize);
+
+    Gizmos.color = Color.blue;
+    Gizmos.DrawWireCube(_area.position, _area.localScale);
+  }
+
+  private void Awake()
+  {
+    position = new NativeArray<Vector3>(_fishCount, Allocator.Persistent);
+    rotation = new NativeArray<Quaternion>(_fishCount, Allocator.Persistent);
+    movingToInterestPoint = new NativeArray<bool>(_fishCount, Allocator.Persistent);
+    reachToInterestPoints = new NativeArray<bool>(_fishCount, Allocator.Persistent);
+    fishTargetPositions = new NativeArray<Vector3>(_fishCount, Allocator.Persistent);
+    fishTargetIndex = new NativeArray<int>(_fishCount, Allocator.Persistent);
+  }
 
   private void Start()
   {
@@ -62,34 +91,87 @@ public class GameManager : MonoBehaviour
 
   private void Update()
   {
-    for (int index = 0; index < _fishTransforms.Count; index++)
-    {
-      Transform variable = _fishTransforms[index];
+    bool [] changeTransform = new bool[_fishCount];
 
-      var dsdsd = UpdateFish(_fishCount, index, 
-        _fishPositions, _fishRotation, 
-        _fishMovingToInterestPoint, _fishReachToInterestPoints, 
-        _fishTargetPositions, _fishTargetIndex,
+    for (int index = 0; index < _fishCount; index++)
+    {
+      changeTransform[index] = UpdateFish(_fishCount, index, _fishPositions, _fishMovingToInterestPoint, _fishReachToInterestPoints, _fishTargetPositions, _fishTargetIndex,
         _targetActive, _targetPositions, _targetTime);
 
-      if (!dsdsd)
+      position[index] = _fishPositions[index];
+      rotation[index] = _fishRotation[index];
+      movingToInterestPoint[index] = _fishMovingToInterestPoint[index];
+      reachToInterestPoints[index] = _fishReachToInterestPoints[index];
+      fishTargetPositions[index] = _fishTargetPositions[index];
+      fishTargetIndex[index] = _fishTargetIndex[index];
+    }
+
+    JobHandle jobHandle = default;
+
+    for (int index = 0; index < _fishCount; index++)
+    {
+      MoveJob moveJob = new MoveJob
+      {
+        index = index,
+        FishCount = _fishCount,
+        FishPositions = position,
+        FishRotation = rotation,
+        FishMovingToInterestPoint = movingToInterestPoint,
+        FishReachToInterestPoints = reachToInterestPoints,
+        FishTargetPositions = fishTargetPositions,
+        AvoidanceRadius = _fishData.AvoidanceRadius,
+        AlignmentDistance = _fishData.AlignmentDistance,
+        CohesionRadius = _fishData.CohesionRadius,
+        StoppingReachDistance = _fishData.StoppingReachDistance,
+        StoppingMovingDistance = _fishData.StoppingMovingDistance,
+        CohesionWeight = _fishData.CohesionWeight,
+        Speed = _fishData.Speed,
+        RotationSpeed = _fishData.RotationSpeed,
+        AreaCenter = AreaCenter,
+        AreaSize = AreaSize,
+        deltaTime = Time.deltaTime
+      };
+
+      jobHandle = moveJob.Schedule(jobHandle);
+    }
+
+    jobHandle.Complete();
+
+    for (int i = 0; i < _fishCount; i++)
+    {
+      _fishPositions[i] = position[i];
+      _fishRotation[i] = rotation[i];
+      _fishMovingToInterestPoint[i] = movingToInterestPoint[i];
+      _fishReachToInterestPoints[i] = reachToInterestPoints[i];
+      _fishTargetPositions[i] = fishTargetPositions[i];
+      _fishTargetIndex[i] = fishTargetIndex[i];
+
+      if (!changeTransform[i])
       {
         continue;
       }
 
-      variable.transform.position = _fishPositions[index];
-      variable.transform.rotation = _fishRotation[index];
+      _fishTransforms[i].transform.position = _fishPositions[i];
+      _fishTransforms[i].transform.rotation = _fishRotation[i];
     }
   }
 
+  private void OnDestroy()
+  {
+    position.Dispose();
+    rotation.Dispose();
+    movingToInterestPoint.Dispose();
+    reachToInterestPoints.Dispose();
+    fishTargetPositions.Dispose();
+    fishTargetIndex.Dispose();
+  }
+
   private bool UpdateFish (
-    int fishCount, int index, 
-    List<Vector3> fishPositions, List<Quaternion> fishRotation, bool [] fishMovingToInterestPoint, bool [] fishReachToInterestPoints,
-    Vector3 [] fishTargetPositions, int [] fishTargetIndex, bool [] targetActive, Vector3[] targetPositions, float [] targetTime)
+    int fishCount, int index, List<Vector3> fishPositions, bool [] fishMovingToInterestPoint, bool [] fishReachToInterestPoints, Vector3 [] fishTargetPositionsArray,
+    int [] fishTargetIndexArray, bool [] targetActive, Vector3 [] targetPositions, float [] targetTime)
   {
     if (fishReachToInterestPoints[index])
     {
-      bool multiEating = false;
       Vector3 calculateMiddlePoint = default;
 
       for (int i = 0; i < fishCount; i++)
@@ -99,12 +181,10 @@ public class GameManager : MonoBehaviour
           continue;
         }
 
-        if (!fishReachToInterestPoints[i] && fishTargetPositions[i] != fishTargetPositions[index])
+        if (!fishReachToInterestPoints[i] && fishTargetPositionsArray[i] != fishTargetPositionsArray[index])
         {
           continue;
         }
-
-        multiEating = true;
 
         float middleX = (fishPositions[index].x + fishPositions[i].x) / 2;
         float middleY = (fishPositions[index].y + fishPositions[i].y) / 2;
@@ -114,7 +194,8 @@ public class GameManager : MonoBehaviour
         break;
       }
 
-      bool eatingComplete = !targetActive[fishTargetIndex[index]] || Eating(_fishData.TimeAtInterestPoint, fishTargetIndex[index]);
+      bool eatingComplete = !targetActive[fishTargetIndexArray[index]] || Eating(_fishData.TimeAtInterestPoint, fishTargetIndexArray[index]);
+
       if (!eatingComplete)
       {
         return false;
@@ -122,107 +203,27 @@ public class GameManager : MonoBehaviour
 
       fishReachToInterestPoints[index] = false;
       fishMovingToInterestPoint[index] = false;
-      bool deactivateComplete = DeactivateTarget(fishTargetIndex[index]);
+      bool deactivateComplete = DeactivateTarget(fishTargetIndexArray[index]);
 
-      if (deactivateComplete && multiEating)
+      if (calculateMiddlePoint != default && deactivateComplete)
       {
         Debug.Log("Reproduce");
         //Reproduce?.Invoke(calculateMiddlePoint);
       }
     }
 
-    fishTargetPositions[index] = FindClosestPoint(targetPositions, targetActive, fishPositions[index], out int indexTarget);
-    fishTargetIndex[index] = indexTarget;
+    fishTargetPositionsArray[index] = FindClosestPoint(targetPositions, targetActive, fishPositions[index], out int indexTarget);
+    fishTargetIndexArray[index] = indexTarget;
 
-    Vector3 avoidanceMove = Vector3.zero;
-    Vector3 alignmentMove = Vector3.zero;
-    Vector3 cohesionMove = Vector3.zero;
-
-    for (int i = 0; i < fishCount; i++)
-    {
-      if (i == index)
-      {
-        continue;
-      }
-
-      if (fishMovingToInterestPoint[i])
-      {
-        continue;
-      }
-
-      float distance = Vector3.Distance(fishPositions[index], fishPositions[i]);
-
-      if (distance < _fishData.AvoidanceRadius)
-      {
-        Vector3 avoidVector = fishPositions[index] - fishPositions[i];
-        avoidanceMove += avoidVector.normalized;
-      }
-
-      if (distance < _fishData.AlignmentDistance)
-      {
-        alignmentMove += fishRotation[i] * Vector3.forward;
-      }
-
-      if (distance < _fishData.CohesionRadius)
-      {
-        cohesionMove += fishPositions[i];
-      }
-    }
-
-    if (cohesionMove != Vector3.zero)
-    {
-      cohesionMove /= fishCount;
-      cohesionMove -= fishPositions[index];
-    }
-
-    Vector3 targetDirection = (fishTargetPositions[index] - fishPositions[index]).normalized;
-
-    float distanceToTarget = Vector3.Distance(fishPositions[index], fishTargetPositions[index]);
-    fishReachToInterestPoints[index] = distanceToTarget <= _fishData.StoppingReachDistance;
-    fishMovingToInterestPoint[index] = distanceToTarget <= _fishData.StoppingMovingDistance;
-
-    Vector3 moveDirection = fishMovingToInterestPoint[index] ? targetDirection
-      : targetDirection + avoidanceMove + alignmentMove + cohesionMove.normalized * _fishData.CohesionWeight;
-
-    Vector3 newPosition = fishPositions[index] + moveDirection.normalized * _fishData.Speed * Time.deltaTime;
-
-    float halfX = AreaSize.x / 2;
-    float halfY = AreaSize.y / 2;
-    float halfZ = AreaSize.z / 2;
-
-    if (newPosition.x < AreaCenter.x - halfX || newPosition.x > AreaCenter.x + halfX)
-    {
-      newPosition.x = Mathf.Clamp(newPosition.x, AreaCenter.x - halfX, AreaCenter.x + halfX);
-      moveDirection.x *= -1;
-    }
-
-    if (newPosition.y < AreaCenter.y - halfY || newPosition.y > AreaCenter.y + halfY)
-    {
-      newPosition.y = Mathf.Clamp(newPosition.y, AreaCenter.y - halfY, AreaCenter.y + halfY);
-      moveDirection.y *= -1;
-    }
-
-    if (newPosition.z < AreaCenter.z - halfZ || newPosition.z > AreaCenter.z + halfZ)
-    {
-      newPosition.z = Mathf.Clamp(newPosition.z, AreaCenter.z - halfZ, AreaCenter.z + halfZ);
-      moveDirection.z *= -1;
-    }
-
-    fishPositions[index] = newPosition;
-
-    Quaternion targetRotation = Quaternion.LookRotation(moveDirection.normalized);
-    Quaternion rotation = Quaternion.Slerp(fishRotation[index], targetRotation, _fishData.RotationSpeed * Time.deltaTime);
-
-    fishRotation[index] = rotation;
     return true;
-    
+
     bool Eating (float timeAtInterestPoint, int indexTargetTime)
     {
       targetTime[indexTargetTime] += Time.deltaTime;
       return targetTime[indexTargetTime] >= timeAtInterestPoint;
     }
-    
-    Vector3 FindClosestPoint (Vector3[] points, bool[] targetActiveArray, Vector3 position, out int pointIndex)
+
+    Vector3 FindClosestPoint (Vector3 [] points, bool [] targetActiveArray, Vector3 vector3, out int pointIndex)
     {
       pointIndex = -1;
       float closestDistance = float.MaxValue;
@@ -235,7 +236,7 @@ public class GameManager : MonoBehaviour
           continue;
         }
 
-        float distance = Vector3.Distance(position, points[i]);
+        float distance = Vector3.Distance(vector3, points[i]);
 
         if (distance < closestDistance)
         {
@@ -260,15 +261,6 @@ public class GameManager : MonoBehaviour
     _fishTransforms.Add(fish);
   }
 
-  private void OnDrawGizmos()
-  {
-    Gizmos.color = Color.red;
-    Gizmos.DrawWireCube(AreaCenter, AreaSize);
-
-    Gizmos.color = Color.blue;
-    Gizmos.DrawWireCube(_area.position, _area.localScale);
-  }
-
   private void GenerateInitialTargets (Vector3 areaCenter, Vector3 areaSize)
   {
     _targetCount = Mathf.FloorToInt(areaSize.x * areaSize.z);
@@ -284,7 +276,7 @@ public class GameManager : MonoBehaviour
 
       var newTarget = Instantiate(_targetPrefab, randomPosition, Quaternion.identity);
       _targetTransforms.Add(newTarget);
-      
+
       _targetActive[i] = true;
     }
   }
@@ -299,7 +291,7 @@ public class GameManager : MonoBehaviour
     _targetTime[index] = 0;
     _targetActive[index] = false;
     _targetTransforms[index].gameObject.SetActive(false);
-    
+
     _deactivateTarget++;
 
     if (_targetCount == _deactivateTarget)
@@ -309,17 +301,17 @@ public class GameManager : MonoBehaviour
     }
 
     return true;
-  }
 
-  private void MoveAllTargets()
-  {
-    for (int index = 0; index < _targetCount; index++)
+    void MoveAllTargets()
     {
-      _targetPositions[index] = AreaSize;
-      _targetTransforms[index].transform.position = AreaSize;
-      
-      _targetActive[index] = true;
-      _targetTransforms[index].gameObject.SetActive(true);
+      for (int index = 0; index < _targetCount; index++)
+      {
+        _targetPositions[index] = AreaSize;
+        _targetTransforms[index].transform.position = AreaSize;
+
+        _targetActive[index] = true;
+        _targetTransforms[index].gameObject.SetActive(true);
+      }
     }
   }
 
@@ -327,7 +319,7 @@ public class GameManager : MonoBehaviour
   private void ActivateAllTargets()
   {
     _deactivateTarget = 0;
-    
+
     for (int index = 0; index < _targetCount; index++)
     {
       Vector3 randomPosition = GenerateRandomPosition(AreaCenter, AreaSize);
