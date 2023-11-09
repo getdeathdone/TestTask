@@ -2,7 +2,6 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
-
 [BurstCompile]
 public struct EatJob : IJobParallelFor
 {
@@ -22,17 +21,17 @@ public struct EatJob : IJobParallelFor
   public NativeArray<bool> TargetActive;
   [NativeDisableParallelForRestriction]
   public NativeArray<float> TargetTime;
-  
+
   [NativeDisableParallelForRestriction]
   public NativeArray<Vector3> CalculateMiddlePoint;
   [NativeDisableParallelForRestriction]
-  public NativeArray<int> FishDeactivateTarget;
+  public NativeArray<int> DisableTarget;
 
   [ReadOnly]
   public float TimeAtInterestPoint;
   [ReadOnly]
   public float deltaTime;
-  
+
   public void Execute (int index)
   {
     if (ReachToInterestPoints[index])
@@ -56,14 +55,16 @@ public struct EatJob : IJobParallelFor
 
         break;
       }
-      
+
       bool eatingComplete = !TargetActive[FishTargetIndexArray[index]];
+
       if (!eatingComplete)
       {
         TargetTime[FishTargetIndexArray[index]] += deltaTime;
       }
 
       eatingComplete = TargetTime[FishTargetIndexArray[index]] >= TimeAtInterestPoint;
+
       if (!eatingComplete)
       {
         return;
@@ -72,7 +73,7 @@ public struct EatJob : IJobParallelFor
       ReachToInterestPoints[index] = false;
       MovingToInterestPoint[index] = false;
 
-      FishDeactivateTarget[index] = FishTargetIndexArray[index];
+      DisableTarget[index] = FishTargetIndexArray[index];
     }
   }
 }

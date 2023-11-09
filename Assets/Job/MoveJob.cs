@@ -2,7 +2,6 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
-
 [BurstCompile]
 public struct MoveJob : IJobParallelFor
 {
@@ -14,7 +13,7 @@ public struct MoveJob : IJobParallelFor
   public NativeArray<bool> FishMovingToInterestPoint;
   [NativeDisableParallelForRestriction]
   public NativeArray<bool> FishReachToInterestPoints;
-  
+
   [NativeDisableParallelForRestriction]
   public NativeArray<Vector3> FishTargetPositions;
   [NativeDisableParallelForRestriction]
@@ -72,7 +71,7 @@ public struct MoveJob : IJobParallelFor
     }
 
     FishTargetPositions[index] = closestPoint;
-    
+
     Vector3 avoidanceMove = Vector3.zero;
     Vector3 alignmentMove = Vector3.zero;
     Vector3 cohesionMove = Vector3.zero;
@@ -83,7 +82,7 @@ public struct MoveJob : IJobParallelFor
       {
         continue;
       }
-      
+
       if (FishMovingToInterestPoint[i])
       {
         continue;
