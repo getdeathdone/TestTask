@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace DefaultNamespace
 {
-  public class FishDataChanger : MonoBehaviour
+  public class UIManager : MonoBehaviour
   {
+    [SerializeField]
+    private TextMeshProUGUI _fishCountView;
+    
     [SerializeField]
     private GameManager _gameManager;
 
@@ -20,6 +25,7 @@ namespace DefaultNamespace
     private FishData FishData => _gameManager.FishData;
     private void Awake()
     {
+      _gameManager.OnUpdateFish += UpdateFishView;
       foreach (FishParameter parameter in Enum.GetValues(typeof(FishParameter)))
       {
         var slider = Instantiate(_sliderFishDataPrefab, _sliderFishDataParent);
@@ -34,6 +40,7 @@ namespace DefaultNamespace
 
     private void OnDestroy()
     {
+      _gameManager.OnUpdateFish -= UpdateFishView;
       UnsubscribeFromSliderEvents();
     }
 
@@ -62,6 +69,11 @@ namespace DefaultNamespace
       {
         sliderPair.Value.value = FishData.GetParameter(sliderPair.Key);
       }
+    }
+    
+    private void UpdateFishView(int value)
+    {
+      _fishCountView.text = $"Fish Count : {value.ToString()}";
     }
 
     private void SubscribeToSliderEvents()

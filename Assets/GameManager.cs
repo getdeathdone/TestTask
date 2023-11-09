@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Jobs;
@@ -6,6 +7,8 @@ using Random = UnityEngine.Random;
 
 public class GameManager : MonoBehaviour
 {
+  public event Action<int> OnUpdateFish;
+  
   [SerializeField]
   private Vector3 _areaOffset = Vector3.one;
   [SerializeField]
@@ -233,6 +236,8 @@ public class GameManager : MonoBehaviour
 
     _position[fishNumber - 1] = position;
     _rotation[fishNumber - 1] = fishRot;
+    
+    OnUpdateFish?.Invoke(_fishCount);
   }
 
   private void AddTargets (int addTargetCount)

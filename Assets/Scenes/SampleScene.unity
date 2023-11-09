@@ -722,15 +722,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7689389608315487825, guid: 34048885b24c9474b8db10b257917ec1, type: 3}
       propertyPath: m_Name
-      value: FishDataChanger
-      objectReference: {fileID: 0}
-    - target: {fileID: 8977094844939759322, guid: 34048885b24c9474b8db10b257917ec1, type: 3}
-      propertyPath: m_SizeDelta.y
-      value: 840
-      objectReference: {fileID: 0}
-    - target: {fileID: 8977094844939759322, guid: 34048885b24c9474b8db10b257917ec1, type: 3}
-      propertyPath: m_AnchoredPosition.y
-      value: -60
+      value: UIManager
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
