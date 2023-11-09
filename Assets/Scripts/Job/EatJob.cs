@@ -8,9 +8,9 @@ public struct EatJob : IJobParallelFor
   [ReadOnly, NativeDisableParallelForRestriction]
   public NativeArray<Vector3> FishPositions;
   [ReadOnly, NativeDisableParallelForRestriction]
-  public NativeArray<Vector3> FishTargetPositionsArray;
+  public NativeArray<Vector3> FishTargetPositions;
   [ReadOnly, NativeDisableParallelForRestriction]
-  public NativeArray<int> FishTargetIndexArray;
+  public NativeArray<int> FishTargetIndex;
 
   [NativeDisableParallelForRestriction]
   public NativeArray<bool> MovingToInterestPoint;
@@ -43,7 +43,7 @@ public struct EatJob : IJobParallelFor
           continue;
         }
 
-        if (!ReachToInterestPoints[i] && FishTargetPositionsArray[i] != FishTargetPositionsArray[index])
+        if (!ReachToInterestPoints[i] && FishTargetPositions[i] != FishTargetPositions[index])
         {
           continue;
         }
@@ -56,14 +56,14 @@ public struct EatJob : IJobParallelFor
         break;
       }
 
-      bool eatingComplete = !TargetActive[FishTargetIndexArray[index]];
+      bool eatingComplete = !TargetActive[FishTargetIndex[index]];
 
       if (!eatingComplete)
       {
-        TargetTime[FishTargetIndexArray[index]] += deltaTime;
+        TargetTime[FishTargetIndex[index]] += deltaTime;
       }
 
-      eatingComplete = TargetTime[FishTargetIndexArray[index]] >= TimeAtInterestPoint;
+      eatingComplete = TargetTime[FishTargetIndex[index]] >= TimeAtInterestPoint;
 
       if (!eatingComplete)
       {
@@ -73,7 +73,7 @@ public struct EatJob : IJobParallelFor
       ReachToInterestPoints[index] = false;
       MovingToInterestPoint[index] = false;
 
-      DisableTarget[index] = FishTargetIndexArray[index];
+      DisableTarget[index] = FishTargetIndex[index];
     }
   }
 }

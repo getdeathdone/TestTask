@@ -10,14 +10,14 @@ public struct MoveJob : IJobParallelFor
   [NativeDisableParallelForRestriction]
   public NativeArray<Quaternion> FishRotation;
   [NativeDisableParallelForRestriction]
-  public NativeArray<bool> FishMovingToInterestPoint;
+  public NativeArray<bool> MovingToInterestPoint;
   [NativeDisableParallelForRestriction]
-  public NativeArray<bool> FishReachToInterestPoints;
+  public NativeArray<bool> ReachToInterestPoints;
 
   [NativeDisableParallelForRestriction]
   public NativeArray<Vector3> FishTargetPositions;
   [NativeDisableParallelForRestriction]
-  public NativeArray<int> FishTargetIndexArray;
+  public NativeArray<int> FishTargetIndex;
 
   [ReadOnly, NativeDisableParallelForRestriction]
   public NativeArray<Vector3> TargetPositions;
@@ -64,7 +64,7 @@ public struct MoveJob : IJobParallelFor
 
       if (distance < closestDistance)
       {
-        FishTargetIndexArray[index] = i;
+        FishTargetIndex[index] = i;
         closestPoint = TargetPositions[i];
         closestDistance = distance;
       }
@@ -83,7 +83,7 @@ public struct MoveJob : IJobParallelFor
         continue;
       }
 
-      if (FishMovingToInterestPoint[i])
+      if (MovingToInterestPoint[i])
       {
         continue;
       }
@@ -116,10 +116,10 @@ public struct MoveJob : IJobParallelFor
     Vector3 targetDirection = (FishTargetPositions[index] - FishPositions[index]).normalized;
 
     float distanceToTarget = Vector3.Distance(FishPositions[index], FishTargetPositions[index]);
-    FishReachToInterestPoints[index] = distanceToTarget <= StoppingReachDistance;
-    FishMovingToInterestPoint[index] = distanceToTarget <= StoppingMovingDistance;
+    ReachToInterestPoints[index] = distanceToTarget <= StoppingReachDistance;
+    MovingToInterestPoint[index] = distanceToTarget <= StoppingMovingDistance;
 
-    Vector3 moveDirection = FishMovingToInterestPoint[index] ? targetDirection : targetDirection + avoidanceMove + alignmentMove + cohesionMove.normalized * CohesionWeight;
+    Vector3 moveDirection = MovingToInterestPoint[index] ? targetDirection : targetDirection + avoidanceMove + alignmentMove + cohesionMove.normalized * CohesionWeight;
 
     Vector3 newPosition = FishPositions[index] + moveDirection.normalized * Speed * deltaTime;
 
