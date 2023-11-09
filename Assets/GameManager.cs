@@ -48,6 +48,8 @@ public class GameManager : MonoBehaviour
   private Vector3 AreaCenter => _area.position + _areaCenterOffset;
   private Vector3 StartTargetPointRelativeToCenter => AreaCenter + _startTargetPoint;
 
+  public FishData FishData => _fishData;
+
   private void OnDrawGizmos()
   {
     Gizmos.color = Color.red;
@@ -66,19 +68,14 @@ public class GameManager : MonoBehaviour
     _fishTargetPositions = new NativeArray<Vector3>(_fishCount, Allocator.Persistent);
     _fishTargetIndex = new NativeArray<int>(_fishCount, Allocator.Persistent);
 
-    _fishDeactivateTarget = new NativeArray<int>(_fishCount, Allocator.Persistent);
     _calculateMiddlePoint = new NativeArray<Vector3>(_fishCount, Allocator.Persistent);
-
-    _targetCount = Mathf.FloorToInt(AreaSize.x * AreaSize.z);
-    
-    _targetPositions = new NativeArray<Vector3>(_targetCount, Allocator.Persistent);
-    _targetActive = new NativeArray<bool>(_targetCount, Allocator.Persistent);
-    _targetTime = new NativeArray<float>(_targetCount, Allocator.Persistent);
+    _fishDeactivateTarget = new NativeArray<int>(_fishCount, Allocator.Persistent);
+    ResetAllFishDeactivateTarget();
   }
 
   private void Start()
   {
-    GenerateInitialTargets();
+    AddTargets(Mathf.FloorToInt(AreaSize.x * AreaSize.z));
 
     for (int i = 1; i <= _fishCount; i++)
     {
@@ -231,21 +228,11 @@ public class GameManager : MonoBehaviour
     Quaternion fishRot = _fishPrefab.rotation;
 
     var fish = Instantiate(_fishPrefab, position, fishRot);
+    fish.SetParent(_area);
     _fishTransforms.Add(fish);
 
     _position[fishNumber - 1] = position;
     _rotation[fishNumber - 1] = fishRot;
-  }
-
-  private void GenerateInitialTargets()
-  {
-    for (int i = 0; i < _targetCount; i++)
-    {
-      var newTarget = Instantiate(_targetPrefab);
-      _targetTransforms.Add(newTarget);
-    }
-
-    ChangeAllTargetTransform();
   }
 
   private void AddTargets (int addTargetCount)
@@ -275,6 +262,7 @@ public class GameManager : MonoBehaviour
     {
       Vector3 position = GenerateRandomPosition();
       var newTarget = Instantiate(_targetPrefab, position, _targetPrefab.rotation);
+      newTarget.SetParent(_area);
       _targetTransforms.Add(newTarget);
       ResetTarget(i);
     }
