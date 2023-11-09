@@ -8,6 +8,7 @@ using Random = UnityEngine.Random;
 public class GameManager : MonoBehaviour
 {
   public event Action<int> OnUpdateFish;
+  public event Action<int> OnUpdateFeed;
   
   [SerializeField]
   private Vector3 _areaOffset = Vector3.one;
@@ -239,6 +240,25 @@ public class GameManager : MonoBehaviour
     
     OnUpdateFish?.Invoke(_fishCount);
   }
+  
+  public void AddTwentyTargets()
+  {
+    AddTargets(20);
+  }
+  
+  public void ResetAllTargets()
+  {
+    for (int i = 0; i < _targetCount; i++)
+    {
+      Vector3 randomPosition = GenerateRandomPosition();
+      _targetTransforms[i].transform.position = randomPosition;
+      _targetTransforms[i].gameObject.SetActive(true);
+      ResetTarget(i);
+    }
+    
+    _deactivateTarget = 0;
+    ResetAllFishDeactivateTarget();
+  }
 
   private void AddTargets (int addTargetCount)
   {
@@ -273,6 +293,7 @@ public class GameManager : MonoBehaviour
     }
 
     _targetCount = newTargetCount;
+    OnUpdateFeed?.Invoke(_targetCount);
   }
 
   private bool DeactivateTarget (int index)
@@ -290,41 +311,17 @@ public class GameManager : MonoBehaviour
     if (_targetCount == _deactivateTarget)
     {
       Debug.Log("DeactivateAllTarget");
-      ResetAllTargets();
-      ResetAllFishDeactivateTarget();
-    }
-
-    return true;
-
-    void ResetAllTargets()
-    {
+      
       for (int i = 0; i < _targetCount; i++)
       {
         _targetTransforms[i].transform.position = StartTargetPointRelativeToCenter;
         ResetTarget(i);
       }
+      
+      ResetAllFishDeactivateTarget();
     }
-  }
 
-  [ContextMenu("Add Targets")]
-  private void AddTenTargets()
-  {
-    AddTargets(10);
-  }
-  
-  [ContextMenu("ChangeAllTargetTransform")]
-  private void ChangeAllTargetTransform()
-  {
-    for (int i = 0; i < _targetCount; i++)
-    {
-      Vector3 randomPosition = GenerateRandomPosition();
-      _targetTransforms[i].transform.position = randomPosition;
-      _targetTransforms[i].gameObject.SetActive(true);
-      ResetTarget(i);
-    }
-    
-    _deactivateTarget = 0;
-    ResetAllFishDeactivateTarget();
+    return true;
   }
 
   private void ResetTarget (int i)
